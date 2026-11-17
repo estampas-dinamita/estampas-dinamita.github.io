@@ -1,7 +1,10 @@
 /* ============ EDITÁ SOLO ESTE ARCHIVO ============
    Ver README.md. Productos de DEMOSTRACIÓN: reemplazalos. */
 window.CONFIG = {
-  whatsapp: "5491130110659",   // TU número: código de país + área + número, sin + ni espacios
+  // Medios por los que el cliente puede enviar el pedido. Dejá "" para ocultar uno.
+  whatsapp: "5491130110659",                       // ej: "5491155551234" (código de país + área + número, sin + ni espacios)
+  instagram: "",      // usuario sin @
+  email: "",
   moneda: "$",
   mercadoPagoEndpoint: null    // 2da etapa: URL de tu backend que crea la preferencia de Checkout Pro
 };

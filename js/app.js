@@ -3,12 +3,19 @@ const $=s=>document.querySelector(s), app=$("#app");
 const money=n=>CONFIG.moneda+n.toLocaleString("es-AR");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const wa=t=>`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(t)}`;
+const CH=()=>[CONFIG.whatsapp&&["wa","WhatsApp"],CONFIG.instagram&&["ig","Instagram"],CONFIG.email&&["mail","Email"]].filter(Boolean);
+const sendBtns=()=>CH().map(([k,n])=>`<button type="button" data-send="${k}">${n}</button>`).join("")||'<span class="err">Falta configurar un medio de contacto en js/products.js</span>';
+function send(k,text,subject){
+  if(k==="wa")window.open(wa(text),"_blank","noopener");
+  if(k==="ig"){try{navigator.clipboard.writeText(text)}catch(e){}window.open("https://ig.me/m/"+CONFIG.instagram,"_blank","noopener");alert("Copiamos tu pedido. Pegalo en el chat de Instagram y enviálo.")}
+  if(k==="mail")location.href=`mailto:${CONFIG.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+}
 const prods=()=>PRODUCTS.filter(p=>p.publicado);
 let cart=[];try{cart=JSON.parse(localStorage.getItem("ed-cart")||"[]")}catch(e){}
 const save=()=>{try{localStorage.setItem("ed-cart",JSON.stringify(cart))}catch(e){}$("#count").textContent=cart.reduce((a,i)=>a+i.qty,0)};
 const find=id=>PRODUCTS.find(p=>p.id===id);
 const view={cat:"Todo",sort:"",q:""};
-$("#waFoot").href=wa("Hola Estampas Dinamita!");
+$("#contactFoot").innerHTML=[CONFIG.instagram&&`Instagram: <a href="https://instagram.com/${CONFIG.instagram}" rel="noopener">@${CONFIG.instagram}</a>`,CONFIG.whatsapp&&`<a href="${wa("Hola!")}" rel="noopener">WhatsApp</a>`,CONFIG.email&&`<a href="mailto:${CONFIG.email}">${CONFIG.email}</a>`].filter(Boolean).join(" · ");
 
 function pic(p,i=0){
   const c=p.colores[0]?.hex||"#ddd";
@@ -62,13 +69,13 @@ colecciones(){
 },
 personalizados(){
   app.innerHTML=`<section><h2>Estampados personalizados</h2><p>Completá el pedido y se abre WhatsApp con todo listo. Si tenés una imagen de referencia, enviala en el chat.</p><form class="f" id="cf">
-  <label>Nombre<input name="nombre" required></label><label>WhatsApp<input name="tel" type="tel" required></label>
+  <label>Nombre<input name="nombre" required></label><label>Tu contacto (WhatsApp, Instagram o email)<input name="tel" required></label>
   <label>Tipo de prenda<select name="prenda"><option>Remera</option><option>Buzo</option><option>Tote bag</option><option>Gorra</option><option>Otra</option></select></label>
   <label>Talle<input name="talle" required></label><label>Color<input name="color" required></label><label>Cantidad<input name="cant" type="number" min="1" value="1" required></label>
   <label>Descripción del diseño<textarea name="desc" rows="4" required></textarea></label><label>Enlace a una referencia (opcional)<input name="ref" type="url" placeholder="https://"></label>
-  <button>Enviar por WhatsApp</button></form></section>`;
-  $("#cf").onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
-   window.open(wa(`*Pedido de estampado personalizado*\nNombre: ${d.nombre}\nWhatsApp: ${d.tel}\nPrenda: ${d.prenda}\nTalle: ${d.talle}\nColor: ${d.color}\nCantidad: ${d.cant}\nDiseño: ${d.desc}${d.ref?`\nReferencia: ${d.ref}`:""}`),"_blank","noopener")};
+  <p><b>Enviar pedido por:</b></p><div class="opts" id="sendRow2">${sendBtns()}</div></form></section>`;
+  $("#sendRow2").onclick=e=>{const b=e.target.closest("[data-send]");if(!b)return;const f=$("#cf");if(!f.reportValidity())return;const d=Object.fromEntries(new FormData(f));
+   send(b.dataset.send,`*Pedido de estampado personalizado*\nNombre: ${d.nombre}\nContacto: ${d.tel}\nPrenda: ${d.prenda}\nTalle: ${d.talle}\nColor: ${d.color}\nCantidad: ${d.cant}\nDiseño: ${d.desc}${d.ref?`\nReferencia: ${d.ref}`:""}`,"Pedido de estampado personalizado")};
 }};
 
 function add(id,talle,color,qty){
@@ -85,18 +92,18 @@ function drawCart(){
   ${cart.length?cart.map((i,n)=>{const p=find(i.id);return `<div class="line"><div><b>${esc(p.nombre)}</b><br><small>Talle ${esc(i.talle)} · ${esc(i.color)} · ${money(p.precio)}</small></div><b>${money(p.precio*i.qty)}</b><div><button class="alt" data-m="${n}" aria-label="Quitar una unidad">−</button> ${i.qty} <button class="alt" data-p="${n}" aria-label="Sumar una unidad">+</button></div><button class="alt" data-d="${n}">Eliminar</button></div>`}).join("")
    :"<p>El carrito está vacío.</p>"}
   <p style="font-size:1.3rem"><b>Total: ${money(total())}</b></p>
-  ${cart.length?`<label>Tu nombre<input id="cn"></label><label>Datos adicionales (envío, aclaraciones)<textarea id="cx" rows="2"></textarea></label><p class="err" id="ce"></p><button id="go">Pedir por WhatsApp</button>`:""}`;
+  ${cart.length?`<label>Tu nombre<input id="cn"></label><label>Datos adicionales (envío, aclaraciones)<textarea id="cx" rows="2"></textarea></label><p class="err" id="ce"></p><p><b>Enviar pedido por:</b></p><div class="opts" id="sendRow">${sendBtns()}</div>`:""}`;
   $("#x").onclick=closeCart;
   c.onclick=e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
    if(d.m!==undefined){const i=cart[d.m];i.qty--;if(i.qty<1)cart.splice(d.m,1)}
    if(d.p!==undefined){const i=cart[d.p];i.qty=Math.min(find(i.id).stock,i.qty+1)}
    if(d.d!==undefined)cart.splice(d.d,1);
    if(d.m!==undefined||d.p!==undefined||d.d!==undefined){save();drawCart()}};
-  $("#go")?.addEventListener("click",()=>{
+  $("#sendRow")?.addEventListener("click",e=>{const b=e.target.closest("[data-send]");if(!b)return;
    const n=$("#cn").value.trim();if(!n){$("#ce").textContent="Escribí tu nombre para continuar.";return}
    const lines=cart.map(i=>{const p=find(i.id);return `- ${p.nombre} | Talle ${i.talle} | ${i.color} | x${i.qty} | ${money(p.precio)} c/u`}).join("\n");
    const x=$("#cx").value.trim();
-   window.open(wa(`*Nuevo pedido*\nCliente: ${n}\n\n${lines}\n\n*Total: ${money(total())}*${x?"\nDatos: "+x:""}`),"_blank","noopener")});
+   send(b.dataset.send,`*Nuevo pedido*\nCliente: ${n}\n\n${lines}\n\n*Total: ${money(total())}*${x?"\nDatos: "+x:""}`,"Nuevo pedido de "+n)});
 }
 /* 2da etapa: si CONFIG.mercadoPagoEndpoint existe, enviar {items} a ese backend y redirigir a init_point.
    Nunca se marca un pago como exitoso desde el navegador. */
